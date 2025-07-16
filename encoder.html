@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unicode Stego Encoder & Decoder</title>
+  <style>
+    body {
+      background: #121212;
+      color: #88cc88;
+      font-family: monospace;
+      padding: 1em;
+    }
+    textarea, input, button {
+      width: 100%;
+      margin-top: 0.5em;
+      padding: 0.5em;
+      background: #222;
+      border: none;
+      color: #88cc88;
+      font-family: monospace;
+    }
+    button {
+      cursor: pointer;
+      background: #88cc88;
+      color: #121212;
+      font-weight: bold;
+      margin-top: 1em;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background: #aaffaa;
+    }
+    label {
+      margin-top: 1em;
+      display: block;
+    }
+    #outputEncode, #outputDecode {
+      white-space: pre-wrap;
+      margin-top: 1em;
+      min-height: 4em;
+    }
+    hr {
+      margin: 2em 0;
+      border-color: #88cc88;
+    }
+  </style>
+</head>
+<body>
+  <h1>Unicode Stego Encoder & Decoder</h1>
+
+  <label for="messageInput">Message to hide:</label>
+  <textarea id="messageInput" rows="3" placeholder="Enter hidden message here"></textarea>
+
+  <label for="carrierInput">Carrier sentence:</label>
+  <textarea id="carrierInput" rows="3" placeholder="Enter carrier sentence here"></textarea>
+
+  <button id="encodeBtn">Encode Hidden Message</button>
+  <pre id="outputEncode"></pre>
+  <button id="copyEncodedBtn">Copy Encoded Message</button>
+
+  <hr />
+
+  <label for="decodeInput">Enter encoded sentence to decode:</label>
+  <textarea id="decodeInput" rows="3" placeholder="Paste encoded sentence here"></textarea>
+
+  <button id="decodeBtn">Decode Hidden Message</button>
+  <pre id="outputDecode"></pre>
+  <button id="copyDecodedBtn">Copy Decoded Message</button>
+
+  <script>
+    // Invisible Unicode chars for encoding bits
+    const zeroChar = '\u200B'; // zero-width space for 0
+    const oneChar = '\u200C'; // zero-width non-joiner for 1
+
+    // Convert string to binary string
+    function toBinary(str) {
+      return str.split('')
+        .map(c => c.charCodeAt(0).toString(2).padStart(8, '0'))
+        .join('');
+    }
+
+    // Convert binary string to string
+    function fromBinary(bin) {
+      let chars = [];
+      for (let i = 0; i < bin.length; i += 8) {
+        const byte = bin.slice(i, i + 8);
+        if (byte.length < 8) break;
+        chars.push(String.fromCharCode(parseInt(byte, 2)));
+      }
+      return chars.join('');
+    }
+
+    // Encode hidden message into carrier sentence using invisible chars
+    function encodeMessage(message, carrier) {
+      const binary = toBinary(message);
+      let encoded = '';
+      let carrierIndex = 0;
+
+      for (let bit of binary) {
+        if (carrierIndex < carrier.length) {
+          encoded += carrier[carrierIndex++];
+        } else {
+          encoded += ' ';
+        }
+        encoded += bit === '0' ? zeroChar : oneChar;
+      }
+
+      encoded += carrier.slice(carrierIndex);
+      return encoded;
+    }
+
+    // Decode hidden message from encoded sentence
+    function decodeMessage(encoded) {
+      let bits = '';
+      for (let char of encoded) {
+        if (char === zeroChar) bits += '0';
+        else if (char === oneChar) bits += '1';
+      }
+      return fromBinary(bits);
+    }
+
+    document.getElementById('encodeBtn').addEventListener('click', () => {
+      const message = document.getElementById('messageInput').value;
+      const carrier = document.getElementById('carrierInput').value;
+
+      if (!message) {
+        alert('Please enter a message to hide.');
+        return;
+      }
+      if (!carrier) {
+        alert('Please enter a carrier sentence.');
+        return;
+      }
+
+      const encoded = encodeMessage(message, carrier);
+      document.getElementById('outputEncode').textContent = encoded;
+    });
+
+    document.getElementById('decodeBtn').addEventListener('click', () => {
+      const encoded = document.getElementById('decodeInput').value;
+      if (!encoded) {
+        alert('Please enter an encoded sentence to decode.');
+        return;
+      }
+
+      const decoded = decodeMessage(encoded);
+      document.getElementById('outputDecode').textContent = decoded || '[No hidden message found]';
+    });
+
+    document.getElementById('copyEncodedBtn').addEventListener('click', () => {
+      const encoded = document.getElementById('outputEncode').textContent;
+      if (!encoded) {
+        alert('Nothing to copy.');
+        return;
+      }
+      navigator.clipboard.writeText(encoded)
+        .then(() => alert('Encoded message copied to clipboard!'))
+        .catch(() => alert('Failed to copy.'));
+    });
+
+    document.getElementById('copyDecodedBtn').addEventListener('click', () => {
+      const decoded = document.getElementById('outputDecode').textContent;
+      if (!decoded) {
+        alert('Nothing to copy.');
+        return;
+      }
+      navigator.clipboard.writeText(decoded)
+        .then(() => alert('Decoded message copied to clipboard!'))
+        .catch(() => alert('Failed to copy.'));
+    });
+  </script>
+</body>
+</html>
